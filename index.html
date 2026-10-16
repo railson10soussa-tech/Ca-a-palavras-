@@ -1,0 +1,1048 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Caça-Palavras Pro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #f97316;
+            border-radius: 9999px;
+        }
+
+        @keyframes roulettePulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.8);
+            }
+            50% {
+                transform: scale(1.15);
+                box-shadow: 0 0 0 10px rgba(234, 88, 12, 0);
+            }
+        }
+        .roulette-hint-highlight {
+            animation: roulettePulse 1.2s infinite ease-in-out;
+            background-color: #ffedd5 !important;
+            border-color: #f97316 !important;
+            color: #c2410c !important;
+            z-index: 10;
+        }
+
+        @keyframes iconPopAnim {
+            0% { transform: scale(0.3) rotate(-15deg); opacity: 0; }
+            50% { transform: scale(1.25) rotate(5deg); opacity: 1; }
+            70% { transform: scale(0.95) rotate(-2deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        .icon-popup-appear {
+            animation: iconPopAnim 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        #roulette-canvas {
+            filter: drop-shadow(0px 8px 16px rgba(0,0,0,0.15));
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-400 min-h-full flex flex-col text-slate-800">
+
+    <!-- Cabeçalho -->
+    <header class="w-full bg-white/90 backdrop-blur-md border-b border-orange-200/50 sticky top-0 z-20 shadow-md">
+        <div class="max-w-6xl mx-auto px-4 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-orange-500/30">
+                    <i class="fa-solid fa-compass-drafting text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">Caça-Palavras Pro</h1>
+                    <p class="text-xs text-slate-500 font-medium" id="header-mode-title">Escolha seu modo de jogo favorito!</p>
+                </div>
+            </div>
+
+            <!-- Controles Globais / Estatísticas -->
+            <div class="flex items-center space-x-2 sm:space-x-4 flex-wrap">
+                <div id="level-badge-container" class="hidden bg-orange-100 px-3 py-1.5 rounded-lg border border-orange-300 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-layer-group text-orange-600 text-xs"></i>
+                    <span id="level-badge" class="font-black text-orange-950 text-xs sm:text-sm">Nível 1</span>
+                </div>
+                <div id="timer-badge-container" class="bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-200 flex items-center space-x-2">
+                    <i class="fa-solid fa-stopwatch text-orange-600"></i>
+                    <span id="timer" class="font-bold text-orange-950 text-sm">02:00</span>
+                </div>
+                <div class="bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200 flex items-center space-x-2">
+                    <i class="fa-solid fa-check-double text-amber-600"></i>
+                    <span id="score-counter" class="font-bold text-amber-950 text-sm">0 / 5</span>
+                </div>
+                <button onclick="openModeSelectionModal()" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-md shadow-slate-900/20 active:scale-95 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-gamepad"></i>
+                    <span class="hidden sm:inline">Modos</span>
+                </button>
+                <button onclick="restartGame()" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-md shadow-orange-600/30 active:scale-95 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span class="hidden sm:inline">Reiniciar</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="flex-grow max-w-6xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Painel Lateral: Categoria, Lista e Roleta -->
+        <aside class="lg:col-span-4 space-y-5">
+            
+            <!-- Modo de Jogo Ativo Bar -->
+            <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl shadow-orange-950/10 border border-orange-100 p-4 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Modo Atual</span>
+                    <span id="active-mode-name" class="font-black text-slate-800 text-sm">⏱️ Desafio 2 Minutos</span>
+                </div>
+                <button onclick="openModeSelectionModal()" class="text-xs font-bold text-orange-600 hover:text-orange-700 underline">Alterar</button>
+            </div>
+
+            <!-- Seleção de Categoria e Painel de Palavras Encontradas/A Encontrar -->
+            <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl shadow-orange-950/10 border border-orange-100 p-5 flex flex-col space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Escolha a Categoria</label>
+                    <select id="category-select" onchange="changeCategory(this.value)" class="w-full bg-orange-50/50 border border-orange-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-500 transition">
+                        <option value="futebol">⚽ Times de Futebol</option>
+                        <option value="tecnologia">💻 Tecnologia & Inovação</option>
+                        <option value="animais">🦁 Animais Selvagens</option>
+                        <option value="frutas">🍎 Frutas Deliciosas</option>
+                        <option value="paises">🌍 Países do Mundo</option>
+                        <option value="custom">✏️ Palavras Personalizadas</option>
+                    </select>
+                </div>
+
+                <!-- Caixa de Palavras Personalizadas -->
+                <div id="custom-words-container" class="hidden space-y-3 p-3 bg-orange-50/80 rounded-xl border border-orange-200">
+                    <label class="block text-xs font-bold text-orange-950 uppercase tracking-wider">Insira palavras (separadas por vírgula)</label>
+                    <textarea id="custom-input" rows="2" placeholder="EX: FLAMENGO, PALMEIRAS, REALMADRID" class="w-full bg-white border border-orange-200 rounded-lg p-2.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-500"></textarea>
+                    <button onclick="applyCustomWords()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg text-xs font-bold transition shadow-sm">Gerar com minhas palavras</button>
+                </div>
+
+                <!-- Lista de Palavras Destacada e Visível -->
+                <div class="bg-orange-50/70 p-3.5 rounded-2xl border border-orange-200">
+                    <div class="flex items-center justify-between mb-3 pb-2 border-b border-orange-200/80">
+                        <h3 class="font-black text-orange-950 text-xs sm:text-sm uppercase tracking-wider flex items-center space-x-2">
+                            <i class="fa-solid fa-align-left text-orange-600"></i>
+                            <span>Palavras para Encontrar</span>
+                        </h3>
+                        <span id="words-left-badge" class="text-xs bg-orange-600 text-white font-extrabold px-2.5 py-0.5 rounded-full shadow-sm">5 restantes</span>
+                    </div>
+                    <!-- Container sem rolagem/com grid ajustado para visibilidade total -->
+                    <div id="words-list" class="grid grid-cols-2 gap-2 min-h-[120px]"></div>
+                </div>
+            </div>
+
+            <!-- Seletor de Cores de Marcação -->
+            <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl shadow-orange-950/10 border border-orange-100 p-4">
+                <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2 flex items-center space-x-2">
+                    <i class="fa-solid fa-palette text-orange-500"></i>
+                    <span>Cor dos Quadrados (Marcação)</span>
+                </h3>
+                <div class="flex items-center justify-between gap-2" id="color-picker-container"></div>
+            </div>
+
+            <!-- Caixa da Roleta de Dica -->
+            <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl shadow-orange-950/10 border border-orange-100 p-5 flex flex-col items-center justify-center relative overflow-hidden">
+                <div class="w-full flex items-center justify-between mb-3">
+                    <h3 class="font-bold text-slate-800 text-sm flex items-center space-x-2">
+                        <i class="fa-solid fa-arrows-spin text-orange-500 animate-spin-slow"></i>
+                        <span>Roleta de Dicas</span>
+                    </h3>
+                    <span id="roulette-status-badge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800">
+                        Disponível
+                    </span>
+                </div>
+
+                <!-- Conteúdo da Roleta -->
+                <div class="relative w-48 h-48 my-2 flex items-center justify-center">
+                    <div class="absolute -top-1 left-1/2 -translate-x-1/2 z-20 text-slate-900 drop-shadow-md">
+                        <i class="fa-solid fa-caret-down text-3xl text-orange-600"></i>
+                    </div>
+                    <canvas id="roulette-canvas" width="190" height="190" class="rounded-full transition-transform ease-out"></canvas>
+                    <div class="absolute w-10 h-10 bg-white border-4 border-slate-800 rounded-full z-10 shadow-lg flex items-center justify-center">
+                        <i class="fa-solid fa-star text-orange-500 text-xs"></i>
+                    </div>
+                </div>
+
+                <button id="spin-btn" onclick="spinRoulette()" class="w-full mt-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-orange-500/30 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:from-slate-300 disabled:to-slate-300 disabled:text-slate-500 disabled:shadow-none flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-dharmachakra"></i>
+                    <span id="spin-btn-text">Girar Roleta para Dica</span>
+                </button>
+            </div>
+
+        </aside>
+
+        <!-- Grade do Caça-Palavras (Centro/Direita) -->
+        <section class="lg:col-span-8 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl shadow-orange-950/10 border border-orange-100 p-4 sm:p-6 flex flex-col items-center justify-center min-h-[450px]">
+            <div id="board-wrapper" class="overflow-auto max-w-full p-2 flex items-center justify-center">
+                <div id="grid-container" class="grid gap-1 bg-orange-100/60 p-2 rounded-xl select-none touch-none shadow-inner border border-orange-200/50"></div>
+            </div>
+            <p class="text-xs text-slate-500 mt-4 text-center font-medium">
+                <i class="fa-solid fa-hand-pointer mr-1 text-orange-500"></i> Arraste sobre as letras para selecionar a palavra desejada.
+            </p>
+        </section>
+
+    </main>
+
+    <!-- Modal Seleção de Modo de Jogo -->
+    <div id="mode-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative overflow-hidden border border-orange-100">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-gradient-to-tr from-orange-500 to-amber-400 text-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-orange-500/30 text-2xl">
+                    <i class="fa-solid fa-gamepad"></i>
+                </div>
+                <h2 class="text-2xl font-black text-slate-800">Escolha o Modo de Jogo</h2>
+                <p class="text-xs text-slate-500">Selecione como prefere jogar esta partida</p>
+            </div>
+
+            <div class="space-y-3">
+                <!-- Modo 1 -->
+                <button onclick="selectMode('timed')" class="w-full text-left p-4 rounded-2xl border-2 border-orange-200 hover:border-orange-500 bg-orange-50/40 hover:bg-orange-50 transition flex items-center justify-between group">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center font-bold text-lg shadow-md group-hover:scale-110 transition">⏱️</div>
+                        <div>
+                            <h4 class="font-extrabold text-slate-800 text-sm">Desafio 2 Minutos</h4>
+                            <p class="text-xs text-slate-500">Ache 5 palavras antes do tempo esgotar!</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-orange-400 group-hover:translate-x-1 transition"></i>
+                </button>
+
+                <!-- Modo 2 -->
+                <button onclick="selectMode('progressive')" class="w-full text-left p-4 rounded-2xl border-2 border-amber-200 hover:border-amber-500 bg-amber-50/40 hover:bg-amber-50 transition flex items-center justify-between group">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-lg shadow-md group-hover:scale-110 transition">📈</div>
+                        <div>
+                            <h4 class="font-extrabold text-slate-800 text-sm">Dificuldade Crescente</h4>
+                            <p class="text-xs text-slate-500">Suba de nível: mais palavras, grade maior e menos tempo!</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-amber-400 group-hover:translate-x-1 transition"></i>
+                </button>
+
+                <!-- Modo 3 -->
+                <button onclick="selectMode('untimed')" class="w-full text-left p-4 rounded-2xl border-2 border-emerald-200 hover:border-emerald-500 bg-emerald-50/40 hover:bg-emerald-50 transition flex items-center justify-between group">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-bold text-lg shadow-md group-hover:scale-110 transition">🧘</div>
+                        <div>
+                            <h4 class="font-extrabold text-slate-800 text-sm">Sem Tempo (Livre)</h4>
+                            <p class="text-xs text-slate-500">Jogue no seu próprio ritmo sem qualquer pressão de relógio.</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-emerald-400 group-hover:translate-x-1 transition"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pop-up Modal do Ícone da Palavra -->
+    <div id="icon-popup-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden pointer-events-none">
+        <div class="bg-white border-4 border-orange-400 rounded-3xl p-6 sm:p-8 text-center shadow-2xl icon-popup-appear max-w-xs w-full">
+            <div id="popup-icon-display" class="text-6xl sm:text-7xl mb-3 filter drop-shadow-md">
+                ⚽
+            </div>
+            <h3 id="popup-word-display" class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-wide">FLAMENGO</h3>
+            <p class="text-xs font-bold text-orange-600 uppercase tracking-wider mt-1">Palavra Encontrada!</p>
+        </div>
+    </div>
+
+    <!-- Modal de Vitória -->
+    <div id="win-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-2xl transform scale-95 transition-transform duration-300" id="win-modal-content">
+            <div class="w-20 h-20 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5 text-3xl shadow-inner animate-bounce">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 id="win-title" class="text-2xl font-black text-slate-800 mb-2">Excelente! Você Venceu!</h2>
+            <p id="win-description" class="text-slate-500 text-sm mb-6">Você encontrou todas as palavras!</p>
+            <div class="flex space-x-3">
+                <button id="win-action-btn" onclick="closeModalAndRestart()" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-orange-600/30 transition">Jogar Novamente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Derrota / Tempo Esgotado -->
+    <div id="lose-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-2xl transform scale-95 transition-transform duration-300" id="lose-modal-content">
+            <div class="w-20 h-20 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-5 text-3xl shadow-inner">
+                <i class="fa-solid fa-hourglass-end"></i>
+            </div>
+            <h2 class="text-2xl font-black text-slate-800 mb-2">Tempo Esgotado!</h2>
+            <p class="text-slate-500 text-sm mb-6">Você encontrou <span id="found-count-lose" class="font-bold text-rose-600">0</span> palavras no tempo limite. Tente novamente!</p>
+            <div class="flex space-x-3">
+                <button onclick="closeLoseModalAndRestart()" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-rose-600/30 transition">Tentar Novamente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast / Notificação Customizada -->
+    <div id="msg-box" class="fixed bottom-5 right-5 max-w-sm bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl z-50 flex items-center space-x-3 transform translate-y-20 opacity-0 transition-all duration-300 border border-slate-700">
+        <i id="msg-icon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="msg-text" class="text-xs sm:text-sm font-medium">Notificação</span>
+    </div>
+
+    <script>
+        // Mapeamento de Ícones por Palavra
+        const wordIcons = {
+            // Futebol
+            "FLAMENGO": "🔴🖤", "PALMEIRAS": "🟢⚪", "CORINTHIANS": "⚪⚫", "SAOPAULO": "🔴⚪⚫",
+            "VASCO": "💢", "GREMIO": "🇪🇪", "SANTOS": "🐳", "CRUZEIRO": "🦊", "BOTAFOGO": "⭐️",
+            "REALMADRID": "👑", "BARCELONA": "🔵🔴", "BAYERN": "🛡️", "JUVENTUS": "⚪⚫",
+            "LIVERPOOL": "🔴", "MANCITY": "🩵", "BENFICA": "🦅",
+            // Tecnologia
+            "HTML": "🌐", "CSS": "🎨", "JAVASCRIPT": "⚡", "PYTHON": "🐍", "REACT": "⚛️",
+            "TAILWIND": "🌊", "CODIGO": "💻", "SERVIDOR": "🖥️", "BANCO": "🗄️", "DADOS": "📊",
+            "ALGORITMO": "🧮", "FRONTEND": "📱",
+            // Animais
+            "ELEFANTE": "🐘", "GIRAFA": "🦒", "TIGRE": "🐅", "LEAO": "🦁", "MACACO": "🐒",
+            "ZEBRA": "🦓", "URSO": "🐻", "LOBO": "🐺", "RAPOSA": "🦊", "PINGUIM": "🐧",
+            "COELHO": "🐰", "PANTERA": "🐆",
+            // Frutas
+            "BANANA": "🍌", "ABACAXI": "🍍", "MORANGO": "🍓", "MELANCIA": "🍉", "LARANJA": "🍊",
+            "MARACUJA": "🟡", "ACAI": "🍇", "ABACATE": "🥑", "MANGA": "🥭", "UVA": "🍇", "GOIABA": "🍈",
+            // Países
+            "BRASIL": "🇧🇷", "ARGENTINA": "🇦🇷", "PORTUGAL": "🇵🇹", "ESPANHA": "🇪🇸", "FRANCA": "🇫🇷",
+            "ITALIA": "🇮🇹", "ALEMANHA": "🇩🇪", "JAPAO": "🇯🇵", "CANADA": "🇨🇦", "MEXICO": "🇲🇽", "ANGOLA": "🇦🇴"
+        };
+
+        const availableHighlightColors = [
+            { name: "Laranja", class: "bg-orange-500 text-white shadow-orange-500/50", bgHex: "#f97316" },
+            { name: "Azul", class: "bg-blue-600 text-white shadow-blue-500/50", bgHex: "#2563eb" },
+            { name: "Verde", class: "bg-emerald-500 text-white shadow-emerald-500/50", bgHex: "#10b981" },
+            { name: "Roxo", class: "bg-purple-600 text-white shadow-purple-500/50", bgHex: "#9333ea" },
+            { name: "Rosa", class: "bg-pink-500 text-white shadow-pink-500/50", bgHex: "#ec4899" },
+            { name: "Vermelho", class: "bg-rose-600 text-white shadow-rose-500/50", bgHex: "#e11d48" }
+        ];
+        let selectedColorIndex = 0;
+
+        const categories = {
+            futebol: ["FLAMENGO", "PALMEIRAS", "CORINTHIANS", "SAOPAULO", "VASCO", "GREMIO", "SANTOS", "CRUZEIRO", "BOTAFOGO", "REALMADRID", "BARCELONA", "BAYERN", "JUVENTUS", "LIVERPOOL", "MANCITY", "BENFICA"],
+            tecnologia: ["HTML", "CSS", "JAVASCRIPT", "PYTHON", "REACT", "TAILWIND", "CODIGO", "SERVIDOR", "BANCO", "DADOS", "ALGORITMO", "FRONTEND"],
+            animais: ["ELEFANTE", "GIRAFA", "TIGRE", "LEAO", "MACACO", "ZEBRA", "URSO", "LOBO", "RAPOSA", "PINGUIM", "COELHO", "PANTERA"],
+            frutas: ["BANANA", "ABACAXI", "MORANGO", "MELANCIA", "LARANJA", "MARACUJA", "ACAI", "ABACATE", "MANGA", "UVA", "GOIABA"],
+            paises: ["BRASIL", "ARGENTINA", "PORTUGAL", "ESPANHA", "FRANCA", "ITALIA", "ALEMANHA", "JAPAO", "CANADA", "MEXICO", "ANGOLA"]
+        };
+
+        // Modos de Jogo: 'timed', 'progressive', 'untimed'
+        let currentGameMode = 'timed'; 
+        let progressiveLevel = 1;
+
+        // Estado do Jogo
+        let currentWords = [];
+        let wordLocations = {};
+        let grid = [];
+        let gridSize = 10;
+        let wordTargetCount = 5;
+        let foundWords = [];
+        let selectedCells = [];
+        let isMouseDown = false;
+        let startCell = null;
+        let timerInterval = null;
+        let secondsRemaining = 120;
+        let gameActive = false;
+        
+        let hintsRemaining = 1;
+        let isSpinning = false;
+        let rouletteSlices = [];
+        let permanentFoundCells = {};
+
+        window.onload = function() {
+            renderColorPicker();
+            openModeSelectionModal();
+        };
+
+        function renderColorPicker() {
+            const container = document.getElementById('color-picker-container');
+            container.innerHTML = '';
+            availableHighlightColors.forEach((color, index) => {
+                const btn = document.createElement('button');
+                const isSelected = index === selectedColorIndex;
+                btn.className = `w-9 h-9 rounded-xl flex items-center justify-center transition-all shadow-sm ${color.class} ${isSelected ? 'ring-4 ring-slate-900/30 scale-110' : 'opacity-80 hover:opacity-100 hover:scale-105'}`;
+                btn.style.backgroundColor = color.bgHex;
+                btn.title = color.name;
+                btn.innerHTML = isSelected ? '<i class="fa-solid fa-check text-xs"></i>' : '';
+                btn.onclick = () => {
+                    selectedColorIndex = index;
+                    renderColorPicker();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function openModeSelectionModal() {
+            document.getElementById('mode-modal').classList.remove('hidden');
+        }
+
+        function selectMode(mode) {
+            currentGameMode = mode;
+            progressiveLevel = 1;
+            document.getElementById('mode-modal').classList.add('hidden');
+            
+            const modeNames = {
+                timed: "⏱️ Desafio 2 Minutos",
+                progressive: "📈 Dificuldade Crescente",
+                untimed: "🧘 Sem Tempo (Livre)"
+            };
+            document.getElementById('active-mode-name').innerText = modeNames[mode];
+            document.getElementById('header-mode-title').innerText = modeNames[mode];
+
+            const catSelect = document.getElementById('category-select').value;
+            if (catSelect !== 'custom') {
+                prepareWordPool(categories[catSelect]);
+            }
+            initGame();
+        }
+
+        function prepareWordPool(pool) {
+            if (currentGameMode === 'progressive') {
+                gridSize = Math.min(8 + Math.floor((progressiveLevel - 1) / 2), 14);
+                wordTargetCount = Math.min(3 + Math.floor((progressiveLevel - 1) * 1), 8);
+                secondsRemaining = Math.max(180 - (progressiveLevel - 1) * 15, 45);
+            } else if (currentGameMode === 'untimed') {
+                gridSize = 10;
+                wordTargetCount = 5;
+                secondsRemaining = 0;
+            } else { // timed
+                gridSize = 10;
+                wordTargetCount = 5;
+                secondsRemaining = 120;
+            }
+
+            const shuffled = [...pool].sort(() => 0.5 - Math.random());
+            currentWords = shuffled.slice(0, wordTargetCount);
+        }
+
+        function showNotification(text, type = 'success') {
+            const box = document.getElementById('msg-box');
+            const txt = document.getElementById('msg-text');
+            const icon = document.getElementById('msg-icon');
+            
+            txt.innerText = text;
+            if (type === 'success') {
+                icon.className = "fa-solid fa-circle-check text-emerald-400 text-lg";
+            } else if (type === 'warning') {
+                icon.className = "fa-solid fa-lightbulb text-amber-400 text-lg";
+            } else {
+                icon.className = "fa-solid fa-triangle-exclamation text-rose-400 text-lg";
+            }
+            
+            box.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                box.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function triggerIconPopup(word) {
+            const modal = document.getElementById('icon-popup-modal');
+            const iconDisplay = document.getElementById('popup-icon-display');
+            const wordDisplay = document.getElementById('popup-word-display');
+
+            iconDisplay.innerText = wordIcons[word] || "⭐";
+            wordDisplay.innerText = word;
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 1300);
+        }
+
+        function changeCategory(cat) {
+            const customContainer = document.getElementById('custom-words-container');
+            if (cat === 'custom') {
+                customContainer.classList.remove('hidden');
+            } else {
+                customContainer.classList.add('hidden');
+                prepareWordPool(categories[cat]);
+                initGame();
+            }
+        }
+
+        function applyCustomWords() {
+            const input = document.getElementById('custom-input').value;
+            const words = input.toUpperCase().split(',').map(w => w.trim().replace(/[^A-Z]/g, '')).filter(w => w.length >= 3);
+            
+            if (words.length < wordTargetCount) {
+                showNotification(`Insira pelo menos ${wordTargetCount} palavras válidas!`, "error");
+                return;
+            }
+            const uniqueWords = [...new Set(words)];
+            prepareWordPool(uniqueWords);
+            initGame();
+            showNotification("Palavras personalizadas carregadas!");
+        }
+
+        function restartGame() {
+            const catSelect = document.getElementById('category-select').value;
+            if (catSelect !== 'custom') {
+                prepareWordPool(categories[catSelect]);
+            }
+            initGame();
+            showNotification("Partida reiniciada!");
+        }
+
+        function initGame() {
+            if (timerInterval) clearInterval(timerInterval);
+            
+            const timerContainer = document.getElementById('timer-badge-container');
+            const levelContainer = document.getElementById('level-badge-container');
+
+            if (currentGameMode === 'untimed') {
+                timerContainer.classList.add('hidden');
+                levelContainer.classList.add('hidden');
+            } else if (currentGameMode === 'progressive') {
+                timerContainer.classList.remove('hidden');
+                levelContainer.classList.remove('hidden');
+                document.getElementById('level-badge').innerText = `Nível ${progressiveLevel}`;
+                updateTimerDisplay();
+                startTimer();
+            } else { // timed
+                timerContainer.classList.remove('hidden');
+                levelContainer.classList.add('hidden');
+                secondsRemaining = 120;
+                updateTimerDisplay();
+                startTimer();
+            }
+
+            foundWords = [];
+            permanentFoundCells = {};
+            wordLocations = {};
+            gameActive = true;
+
+            generateGrid();
+            renderWordsList();
+            updateScore();
+
+            hintsRemaining = 1;
+            isSpinning = false;
+            updateRouletteUI();
+            drawRoulette();
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if (!gameActive || currentGameMode === 'untimed') return;
+                secondsRemaining--;
+                updateTimerDisplay();
+
+                if (secondsRemaining <= 0) {
+                    triggerGameOver();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            if (currentGameMode === 'untimed') return;
+            const mins = Math.floor(secondsRemaining / 60).toString().padStart(2, '0');
+            const secs = (secondsRemaining % 60).toString().padStart(2, '0');
+            const timerEl = document.getElementById('timer');
+            timerEl.innerText = `${mins}:${secs}`;
+            
+            if (secondsRemaining <= 15) {
+                timerEl.classList.add('text-rose-600', 'animate-pulse');
+            } else {
+                timerEl.classList.remove('text-rose-600', 'animate-pulse');
+            }
+        }
+
+        function generateGrid() {
+            let success = false;
+            let attempts = 0;
+
+            while (!success && attempts < 50) {
+                attempts++;
+                grid = Array(gridSize).fill(null).map(() => Array(gridSize).fill(''));
+                wordLocations = {};
+                success = true;
+
+                let sortedWords = [...currentWords].sort((a, b) => b.length - a.length);
+
+                for (let word of sortedWords) {
+                    let placed = false;
+                    let wordAttempts = 0;
+
+                    while (!placed && wordAttempts < 100) {
+                        wordAttempts++;
+                        let dirs = [
+                            {r: 0, c: 1}, {r: 1, c: 0}, {r: 1, c: 1}, {r: -1, c: 1},
+                            {r: 0, c: -1}, {r: -1, c: 0}, {r: -1, c: -1}, {r: 1, c: -1}
+                        ];
+                        let dir = dirs[Math.floor(Math.random() * dirs.length)];
+                        let row = Math.floor(Math.random() * gridSize);
+                        let col = Math.floor(Math.random() * gridSize);
+
+                        let endR = row + dir.r * (word.length - 1);
+                        let endC = col + dir.c * (word.length - 1);
+
+                        if (endR >= 0 && endR < gridSize && endC >= 0 && endC < gridSize) {
+                            let fits = true;
+                            let tempR = row;
+                            let tempC = col;
+
+                            for (let i = 0; i < word.length; i++) {
+                                let currentChar = grid[tempR][tempC];
+                                if (currentChar !== '' && currentChar !== word[i]) {
+                                    fits = false;
+                                    break;
+                                }
+                                tempR += dir.r;
+                                tempC += dir.c;
+                            }
+
+                            if (fits) {
+                                tempR = row;
+                                tempC = col;
+                                let cellsPos = [];
+                                for (let i = 0; i < word.length; i++) {
+                                    grid[tempR][tempC] = word[i];
+                                    cellsPos.push({r: tempR, c: tempC});
+                                    tempR += dir.r;
+                                    tempC += dir.c;
+                                }
+                                wordLocations[word] = cellsPos;
+                                placed = true;
+                            }
+                        }
+                    }
+
+                    if (!placed) {
+                        success = false;
+                        break;
+                    }
+                }
+            }
+
+            const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    if (grid[r][c] === '') {
+                        grid[r][c] = alphabet[Math.floor(Math.random() * alphabet.length)];
+                    }
+                }
+            }
+
+            renderBoard();
+        }
+
+        function renderBoard() {
+            const container = document.getElementById('grid-container');
+            container.innerHTML = '';
+            container.style.gridTemplateColumns = `repeat(${gridSize}, minmax(0, 1fr))`;
+
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    const cell = document.createElement('div');
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    
+                    let cellSizeClass = gridSize > 11 
+                        ? "w-7 h-7 sm:w-8 sm:h-8 text-xs sm:text-sm" 
+                        : "w-8 h-8 sm:w-10 sm:h-10 text-sm sm:text-base";
+
+                    cell.className = `${cellSizeClass} bg-white border border-orange-200/60 rounded-lg flex items-center justify-center font-bold text-slate-700 cursor-pointer select-none transition-all duration-150 hover:bg-orange-100 hover:border-orange-300 active:scale-95 shadow-sm`;
+                    cell.innerText = grid[r][c];
+
+                    cell.addEventListener('mousedown', (e) => handleTouchStart(r, c, e));
+                    cell.addEventListener('mouseenter', () => handleTouchMove(r, c));
+                    cell.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        handleTouchStart(r, c, e);
+                    }, {passive: false});
+
+                    container.appendChild(cell);
+                }
+            }
+
+            document.addEventListener('mouseup', handleTouchEnd);
+            document.addEventListener('touchend', handleTouchEnd);
+        }
+
+        function handleTouchStart(r, c, e) {
+            if (!gameActive) return;
+            isMouseDown = true;
+            startCell = {r, c};
+            selectedCells = [{r, c}];
+            updateSelectionUI();
+        }
+
+        function handleTouchMove(r, c) {
+            if (!isMouseDown || !startCell) return;
+            
+            let dr = r - startCell.r;
+            let dc = c - startCell.c;
+            
+            let stepR = dr === 0 ? 0 : dr / Math.abs(dr);
+            let stepC = dc === 0 ? 0 : dc / Math.abs(dc);
+
+            if (stepR !== 0 && stepC !== 0 && Math.abs(dr) !== Math.abs(dc)) {
+                return; 
+            }
+
+            let len = Math.max(Math.abs(dr), Math.abs(dc));
+            let newSelection = [];
+            let currR = startCell.r;
+            let currC = startCell.c;
+
+            for (let i = 0; i <= len; i++) {
+                newSelection.push({r: currR, c: currC});
+                currR += stepR;
+                currC += stepC;
+            }
+
+            selectedCells = newSelection;
+            updateSelectionUI();
+        }
+
+        function handleTouchEnd() {
+            if (!isMouseDown) return;
+            isMouseDown = false;
+            
+            if (selectedCells.length > 0) {
+                checkSelectedWord();
+            }
+            selectedCells = [];
+            updateSelectionUI();
+        }
+
+        document.addEventListener('touchmove', (e) => {
+            if (!isMouseDown) return;
+            const touch = e.touches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (target && target.dataset.row !== undefined && target.dataset.col !== undefined) {
+                handleTouchMove(parseInt(target.dataset.row), parseInt(target.dataset.col));
+            }
+        }, {passive: true});
+
+        function updateSelectionUI() {
+            const cells = document.querySelectorAll('#grid-container > div');
+            let cellSizeClass = gridSize > 11 
+                ? "w-7 h-7 sm:w-8 sm:h-8 text-xs sm:text-sm" 
+                : "w-8 h-8 sm:w-10 sm:h-10 text-sm sm:text-base";
+
+            cells.forEach(cell => {
+                const r = parseInt(cell.dataset.row);
+                const c = parseInt(cell.dataset.col);
+                
+                let isSelected = selectedCells.some(sc => sc.r === r && sc.c === c);
+                if (isSelected) {
+                    cell.className = `${cellSizeClass} bg-orange-600 text-white rounded-lg flex items-center justify-center font-bold cursor-pointer select-none shadow-md shadow-orange-600/40 scale-105 transition-all duration-75`;
+                } else {
+                    let foundColor = permanentFoundCells[`${r},${c}`];
+                    if (foundColor) {
+                        cell.className = `${cellSizeClass} ${foundColor} rounded-lg flex items-center justify-center font-bold cursor-pointer select-none shadow-md`;
+                    } else if (!cell.classList.contains('roulette-hint-highlight')) {
+                        cell.className = `${cellSizeClass} bg-white border border-orange-200/60 rounded-lg flex items-center justify-center font-bold text-slate-700 cursor-pointer select-none transition-all duration-150 hover:bg-orange-100 hover:border-orange-300 shadow-sm`;
+                    }
+                }
+            });
+        }
+
+        function checkSelectedWord() {
+            let word1 = selectedCells.map(sc => grid[sc.r][sc.c]).join('');
+            let word2 = word1.split('').reverse().join('');
+
+            let matchedWord = null;
+            if (currentWords.includes(word1) && !foundWords.includes(word1)) {
+                matchedWord = word1;
+            } else if (currentWords.includes(word2) && !foundWords.includes(word2)) {
+                matchedWord = word2;
+            }
+
+            if (matchedWord) {
+                foundWords.push(matchedWord);
+                
+                let chosenColorClass = availableHighlightColors[selectedColorIndex].class;
+                
+                if (wordLocations[matchedWord]) {
+                    wordLocations[matchedWord].forEach(sc => {
+                        permanentFoundCells[`${sc.r},${sc.c}`] = chosenColorClass;
+                    });
+                } else {
+                    selectedCells.forEach(sc => {
+                        permanentFoundCells[`${sc.r},${sc.c}`] = chosenColorClass;
+                    });
+                }
+
+                fireWordConfetti();
+                triggerIconPopup(matchedWord);
+
+                renderWordsList();
+                updateScore();
+                drawRoulette();
+
+                if (foundWords.length === currentWords.length) {
+                    triggerWin();
+                }
+            }
+        }
+
+        function fireWordConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 45,
+                    spread: 60,
+                    origin: { y: 0.7 },
+                    colors: ['#ea580c', '#f59e0b', '#10b981', '#ef4444', '#06b6d4']
+                });
+            }
+        }
+
+        function renderWordsList() {
+            const listContainer = document.getElementById('words-list');
+            listContainer.innerHTML = '';
+
+            // Garante visibilidade total ajustando colunas dinamicamente se necessário
+            if (currentWords.length > 6) {
+                listContainer.className = "grid grid-cols-2 gap-1.5";
+            } else {
+                listContainer.className = "grid grid-cols-2 gap-2";
+            }
+
+            currentWords.forEach(word => {
+                const isFound = foundWords.includes(word);
+                const item = document.createElement('div');
+                const icon = wordIcons[word] || "⭐";
+                
+                if (isFound) {
+                    item.className = "flex items-center space-x-2 p-2 rounded-xl bg-emerald-500 text-white font-extrabold text-xs shadow-md shadow-emerald-500/20 border border-emerald-600 transition scale-95";
+                    item.innerHTML = `<i class="fa-solid fa-circle-check text-xs"></i><span class="text-sm mr-1">${icon}</span><span class="truncate line-through decoration-2 decoration-white">${word}</span>`;
+                } else {
+                    item.className = "flex items-center space-x-2 p-2 rounded-xl bg-white border-2 border-orange-200 text-slate-800 font-extrabold text-xs shadow-sm hover:border-orange-400 transition";
+                    item.innerHTML = `<i class="fa-regular fa-circle text-orange-500 text-xs"></i><span class="text-sm mr-1">${icon}</span><span class="truncate">${word}</span>`;
+                }
+                listContainer.appendChild(item);
+            });
+
+            const badge = document.getElementById('words-left-badge');
+            const remaining = currentWords.length - foundWords.length;
+            badge.innerText = `${remaining} restantes`;
+        }
+
+        function updateScore() {
+            document.getElementById('score-counter').innerText = `${foundWords.length} / ${currentWords.length}`;
+        }
+
+        function updateRouletteUI() {
+            const btn = document.getElementById('spin-btn');
+            const btnTxt = document.getElementById('spin-btn-text');
+            const badge = document.getElementById('roulette-status-badge');
+
+            if (hintsRemaining > 0 && gameActive) {
+                btn.disabled = false;
+                btnTxt.innerText = "Girar Roleta para Dica";
+                badge.className = "text-xs font-bold px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800";
+                badge.innerText = "Disponível (1/1)";
+            } else {
+                btn.disabled = true;
+                btnTxt.innerText = "Roleta já Utilizada (0/1)";
+                badge.className = "text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500";
+                badge.innerText = "Esgotado (0/1)";
+            }
+        }
+
+        function drawRoulette() {
+            const canvas = document.getElementById('roulette-canvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const cx = width / 2;
+            const cy = height / 2;
+            const radius = cx - 5;
+
+            const remaining = currentWords.filter(w => !foundWords.includes(w));
+            
+            rouletteSlices = remaining.map(word => ({
+                letter: word[0],
+                word: word
+            }));
+
+            if (rouletteSlices.length === 0) {
+                rouletteSlices = [{ letter: '★', word: '' }];
+            }
+
+            ctx.clearRect(0, 0, width, height);
+
+            const total = rouletteSlices.length;
+            const sliceAngle = (2 * Math.PI) / total;
+            const palette = ['#f97316', '#fbbf24', '#10b981', '#ea580c', '#06b6d4', '#d97706', '#ef4444'];
+
+            for (let i = 0; i < total; i++) {
+                const startA = i * sliceAngle;
+                const endA = startA + sliceAngle;
+
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, radius, startA, endA);
+                ctx.closePath();
+
+                ctx.fillStyle = palette[i % palette.length];
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(startA + sliceAngle / 2);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 20px Inter, sans-serif';
+                ctx.fillText(rouletteSlices[i].letter, radius - 20, 7);
+                ctx.restore();
+            }
+        }
+
+        function spinRoulette() {
+            if (!gameActive || hintsRemaining <= 0 || isSpinning) return;
+
+            const remaining = currentWords.filter(w => !foundWords.includes(w));
+            if (remaining.length === 0) return;
+
+            isSpinning = true;
+            hintsRemaining--;
+            updateRouletteUI();
+
+            const canvas = document.getElementById('roulette-canvas');
+            const totalSlices = rouletteSlices.length;
+            
+            const targetIndex = Math.floor(Math.random() * totalSlices);
+            const selectedSlice = rouletteSlices[targetIndex];
+
+            const sliceAngle = 360 / totalSlices;
+            const targetSliceCenterAngle = (targetIndex * sliceAngle) + (sliceAngle / 2);
+            
+            const extraRounds = 360 * 5;
+            const targetRotation = extraRounds + (270 - targetSliceCenterAngle);
+
+            canvas.style.transition = 'transform 4s cubic-bezier(0.15, 0.9, 0.25, 1)';
+            canvas.style.transform = `rotate(${targetRotation}deg)`;
+
+            setTimeout(() => {
+                isSpinning = false;
+                highlightRouletteResult(selectedSlice);
+            }, 4100);
+        }
+
+        function highlightRouletteResult(slice) {
+            const targetWord = slice.word;
+            const letter = slice.letter;
+
+            if (!targetWord || !wordLocations[targetWord]) return;
+
+            const firstCell = wordLocations[targetWord][0];
+            const cellElem = document.querySelector(`[data-row="${firstCell.r}"][data-col="${firstCell.c}"]`);
+
+            if (cellElem) {
+                cellElem.classList.add('roulette-hint-highlight');
+                cellElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                showNotification(`A roleta caiu em '${letter}'! Destaquei o início da palavra ${targetWord}!`, "warning");
+            }
+        }
+
+        function triggerWin() {
+            gameActive = false;
+            if (timerInterval) clearInterval(timerInterval);
+
+            if (typeof confetti === 'function') {
+                const duration = 2.5 * 1000;
+                const end = Date.now() + duration;
+
+                (function frame() {
+                    confetti({ particleCount: 6, angle: 60, spread: 55, origin: { x: 0 } });
+                    confetti({ particleCount: 6, angle: 120, spread: 55, origin: { x: 1 } });
+                    if (Date.now() < end) requestAnimationFrame(frame);
+                })();
+            }
+
+            const winTitle = document.getElementById('win-title');
+            const winDesc = document.getElementById('win-description');
+            const winActionBtn = document.getElementById('win-action-btn');
+
+            if (currentGameMode === 'progressive') {
+                winTitle.innerText = `Nível ${progressiveLevel} Concluído! 🎉`;
+                winDesc.innerText = `Você dominou este nível com sucesso! Pronto para subir a dificuldade?`;
+                winActionBtn.innerText = `Avançar para o Nível ${progressiveLevel + 1}`;
+            } else {
+                winTitle.innerText = `Excelente! Você Venceu! 🎉`;
+                winDesc.innerText = `Você encontrou todas as ${currentWords.length} palavras!`;
+                winActionBtn.innerText = `Jogar Novamente`;
+            }
+
+            const modal = document.getElementById('win-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                document.getElementById('win-modal-content').classList.remove('scale-95');
+                document.getElementById('win-modal-content').classList.add('scale-100');
+            }, 10);
+        }
+
+        function triggerGameOver() {
+            gameActive = false;
+            if (timerInterval) clearInterval(timerInterval);
+
+            document.getElementById('found-count-lose').innerText = foundWords.length;
+
+            const modal = document.getElementById('lose-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                document.getElementById('lose-modal-content').classList.remove('scale-95');
+                document.getElementById('lose-modal-content').classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModalAndRestart() {
+            const modal = document.getElementById('win-modal');
+            modal.classList.add('opacity-0');
+            document.getElementById('win-modal-content').classList.remove('scale-100');
+            document.getElementById('win-modal-content').classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                if (currentGameMode === 'progressive') {
+                    progressiveLevel++;
+                }
+                const catSelect = document.getElementById('category-select').value;
+                if (catSelect !== 'custom') {
+                    prepareWordPool(categories[catSelect]);
+                }
+                initGame();
+            }, 300);
+        }
+
+        function closeLoseModalAndRestart() {
+            const modal = document.getElementById('lose-modal');
+            modal.classList.add('opacity-0');
+            document.getElementById('lose-modal-content').classList.remove('scale-100');
+            document.getElementById('lose-modal-content').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                restartGame();
+            }, 300);
+        }
+    </script>
+</body>
+</html>
+```
